@@ -2,33 +2,45 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const isProduction = process.env.NODE_ENV === 'production';
-console.log(`[DB] Running in ${process.env.NODE_ENV || 'development'} mode. SSL: ${isProduction}`);
+console.log('--- DATABASE CONNECTION DIAGNOSTICS ---');
+console.log(`[DB] NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`[DB] isProduction: ${isProduction}`);
+console.log(`[DB] DATABASE_URL present: ${!!process.env.DATABASE_URL}`);
+console.log(`[DB] DB_HOST present: ${!!process.env.DB_HOST}`);
+console.log(`[DB] DB_NAME present: ${!!process.env.DB_NAME}`);
 
 let poolConfig;
 
-if (process.env.DATABASE_URL) {
-  console.log('[DB] Using DATABASE_URL connection string.');
-  poolConfig = { connectionString: process.env.DATABASE_URL };
-} else if (process.env.DB_HOST && process.env.DB_NAME) {
-  console.log(`[DB] Using individual DB variables. Host: ${process.env.DB_HOST}`);
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== '') {
+  console.log('[DB] Action: Using DATABASE_URL.');
   poolConfig = {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 5432,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+    connectionString: process.env.DATABASE_URL.trim()
+  };
+} else if (process.env.DB_HOST && process.env.DB_HOST.trim() !== '') {
+  console.log(`[DB] Action: Using individual variables. Host: ${process.env.DB_HOST}`);
+  poolConfig = {
+    host: process.env.DB_HOST.trim(),
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    user: process.env.DB_USER ? process.env.DB_USER.trim() : undefined,
+    password: process.env.DB_PASSWORD ? process.env.DB_PASSWORD.trim() : undefined,
+    database: process.env.DB_NAME ? process.env.DB_NAME.trim() : undefined,
   };
 } else {
-  console.error('CRITICAL ERROR: No database connection configuration found. Set DATABASE_URL or DB_HOST/DB_NAME.');
+  console.error('[DB] CRITICAL ERROR: No connection configuration found!');
   process.exit(1);
 }
 
 // Enable SSL for production (required by Railway)
 if (isProduction) {
+  console.log('[DB] SSL: Enabled (rejectUnauthorized: false)');
   poolConfig.ssl = {
     rejectUnauthorized: false
   };
+} else {
+  console.log('[DB] SSL: Disabled');
 }
+
+console.log('--- END DIAGNOSTICS ---');
 
 const pool = new Pool(poolConfig);
 
