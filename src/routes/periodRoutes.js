@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const periodController = require('../controllers/periodController');
-const protect = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 
 // Protect all period routes
 router.use(protect);

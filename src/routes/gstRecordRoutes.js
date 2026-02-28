@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const gstRecordController = require('../controllers/gstRecordController');
-const protect = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 
 // Protect all GST record routes
 router.use(protect);

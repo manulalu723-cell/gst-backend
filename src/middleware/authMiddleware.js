@@ -21,7 +21,7 @@ const protect = async (req, res, next) => {
 
         // Get user from DB and attach to req
         const result = await db.query(
-            'SELECT id, name, email, role FROM users WHERE id = $1',
+            'SELECT id, name, email, role, active FROM users WHERE id = $1',
             [decoded.id]
         );
 
@@ -29,7 +29,13 @@ const protect = async (req, res, next) => {
             return res.status(401).json({ message: 'User no longer exists' });
         }
 
-        req.user = result.rows[0];
+        const user = result.rows[0];
+
+        if (user.active === false) {
+            return res.status(403).json({ message: 'Account deactivated. Please contact admin.' });
+        }
+
+        req.user = user;
         next();
     } catch (err) {
         console.error('Auth Middleware Error:', err);
@@ -37,4 +43,4 @@ const protect = async (req, res, next) => {
     }
 };
 
-module.exports = protect;
+module.exports = { protect };
