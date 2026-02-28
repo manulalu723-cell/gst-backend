@@ -6,13 +6,22 @@ const db = require('./src/config/db'); // Initialize DB connection
 const errorHandler = require('./src/middleware/errorHandler');
 const notFound = require('./src/middleware/notFound');
 
+// Startup Environment Validation
+const requiredEnvs = ['JWT_SECRET', 'FRONTEND_URL'];
+requiredEnvs.forEach(env => {
+    if (!process.env[env]) {
+        console.error(`CRITICAL ERROR: Environment variable ${env} is not defined.`);
+        process.exit(1);
+    }
+});
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
-    process.env.FRONTEND_URL
+    process.env.FRONTEND_URL.replace(/\/$/, "") // Remove trailing slash
 ];
 
 app.use(cors({
@@ -22,7 +31,9 @@ app.use(cors({
         if (allowedOrigins.includes(origin)) {
             return callback(null, true);
         } else {
-            return callback(new Error("CORS not allowed for this origin: " + origin));
+            const error = new Error("CORS policy blocked this request.");
+            error.statusCode = 403;
+            return callback(error);
         }
     },
     credentials: true
