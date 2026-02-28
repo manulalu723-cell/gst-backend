@@ -9,13 +9,25 @@ const notFound = require('./src/middleware/notFound');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:4200',
-    credentials: true,
-    optionsSuccessStatus: 200, // For legacy browser support
-};
-app.use(cors(corsOptions));
+const allowedOrigins = [
+    "http://localhost:4200",
+    "http://127.0.0.1:4200",
+    process.env.FRONTEND_URL
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        } else {
+            return callback(new Error("CORS not allowed for this origin: " + origin));
+        }
+    },
+    credentials: true
+}));
+
 app.use(express.json());
 
 // Routes
