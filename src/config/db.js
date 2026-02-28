@@ -22,12 +22,18 @@ if (isProduction) {
 
 const pool = new Pool(poolConfig);
 
-// Proactive test connection log on server start
-pool.query('SELECT NOW()', (err, res) => {
+// Proactive test connection and schema check on server start
+pool.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users')", (err, res) => {
   if (err) {
-    console.error('Error connecting to the database:', err.stack);
+    console.error('CRITICAL: Database connection failed!', {
+      message: err.message,
+      code: err.code,
+      detail: err.detail,
+    });
+  } else if (!res.rows[0].exists) {
+    console.warn('WARNING: The "users" table does not exist. Please run the schema.sql script against your database.');
   } else {
-    console.log('Successfully connected to PostgreSQL database at:', res.rows[0].now);
+    console.log('Successfully connected to PostgreSQL. Verified that "users" table exists.');
   }
 });
 
