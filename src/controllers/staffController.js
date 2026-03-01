@@ -6,7 +6,7 @@ const db = require('../config/db');
  */
 exports.getStaff = async (req, res, next) => {
     try {
-        const { search } = req.query;
+        const search = req.query.q || req.query.search;
         let query = 'SELECT id, name, email, role, active, created_at FROM users';
         const params = [];
 
