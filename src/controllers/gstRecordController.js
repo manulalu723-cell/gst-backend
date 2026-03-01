@@ -122,16 +122,17 @@ exports.generateRecords = async (req, res, next) => {
 
 /**
  * Get GST records with joined client and period data
- * GET /api/gst-records?periodId=xxx
+ * GET /api/gst-records?periodId=xxx&month=xxx&financial_year=xxx&status=xxx&q=xxx
  */
 exports.getGstRecords = async (req, res, next) => {
     try {
-        const { periodId } = req.query;
+        const { periodId, month, financial_year, status, q } = req.query;
 
         let query = `
       SELECT 
         r.*, 
         c.name as client_name, 
+        c.gstin,
         p.month, 
         p.financial_year 
       FROM gst_records r
@@ -139,10 +140,35 @@ exports.getGstRecords = async (req, res, next) => {
       JOIN periods p ON r.period_id = p.id
     `;
 
+        const conditions = [];
         const params = [];
+        let paramIndex = 1;
+
         if (periodId) {
-            query += ` WHERE r.period_id = $1`;
+            conditions.push(`r.period_id = $${paramIndex++}`);
             params.push(periodId);
+        }
+        if (month) {
+            conditions.push(`p.month = $${paramIndex++}`);
+            params.push(month);
+        }
+        if (financial_year) {
+            conditions.push(`p.financial_year = $${paramIndex++}`);
+            params.push(financial_year);
+        }
+        if (status) {
+            conditions.push(`(r.gstr1_status = $${paramIndex} OR r.gstr3b_status = $${paramIndex})`);
+            params.push(status.toLowerCase());
+            paramIndex++;
+        }
+        if (q) {
+            conditions.push(`(c.name ILIKE $${paramIndex} OR c.gstin ILIKE $${paramIndex})`);
+            params.push(`%${q}%`);
+            paramIndex++;
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
         }
 
         query += ` ORDER BY c.name ASC`;
