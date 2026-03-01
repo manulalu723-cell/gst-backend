@@ -222,3 +222,61 @@ exports.updateGstRecord = async (req, res, next) => {
         next(err);
     }
 };
+
+/**
+ * Bulk update GST records
+ * POST /api/gst-records/bulk
+ */
+exports.bulkUpdateGstRecords = async (req, res, next) => {
+    try {
+        const { items } = req.body;
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ message: 'items array is required' });
+        }
+
+        let updated = 0;
+        for (const item of items) {
+            const fields = [];
+            const params = [];
+            let paramIndex = 1;
+
+            if (item.gstr1_status) {
+                fields.push(`gstr1_status = $${paramIndex++}`);
+                params.push(item.gstr1_status);
+            }
+            if (item.gstr3b_status) {
+                fields.push(`gstr3b_status = $${paramIndex++}`);
+                params.push(item.gstr3b_status);
+            }
+            if (item.gstr1_filed_date !== undefined) {
+                fields.push(`gstr1_filed_date = $${paramIndex++}`);
+                params.push(item.gstr1_filed_date);
+            }
+            if (item.gstr3b_filed_date !== undefined) {
+                fields.push(`gstr3b_filed_date = $${paramIndex++}`);
+                params.push(item.gstr3b_filed_date);
+            }
+            if (item.remarks !== undefined) {
+                fields.push(`remarks = $${paramIndex++}`);
+                params.push(item.remarks);
+            }
+
+            if (fields.length > 0 && item.id) {
+                params.push(item.id);
+                await db.query(
+                    `UPDATE gst_records SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
+                    params
+                );
+                updated++;
+            }
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { updated }
+        });
+    } catch (err) {
+        next(err);
+    }
+};

@@ -7,6 +7,7 @@ const { protect } = require('../middleware/authMiddleware');
 router.use(protect);
 
 router.post('/generate', gstRecordController.generateRecords);
+router.post('/bulk', gstRecordController.bulkUpdateGstRecords);
 router.post('/', gstRecordController.createGstRecord);
 router.get('/', gstRecordController.getGstRecords);
 router.put('/:id', gstRecordController.updateGstRecord);
