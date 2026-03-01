@@ -6,6 +6,7 @@ const { protect } = require('../middleware/authMiddleware');
 // Protect all GST record routes
 router.use(protect);
 
+router.post('/generate', gstRecordController.generateRecords);
 router.post('/', gstRecordController.createGstRecord);
 router.get('/', gstRecordController.getGstRecords);
 router.put('/:id', gstRecordController.updateGstRecord);

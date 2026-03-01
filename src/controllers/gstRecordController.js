@@ -49,6 +49,78 @@ exports.createGstRecord = async (req, res, next) => {
 };
 
 /**
+ * Generate GST records for all active clients in a period
+ * POST /api/gst-records/generate
+ */
+exports.generateRecords = async (req, res, next) => {
+    try {
+        const { month, financial_year } = req.body;
+
+        if (!month || !financial_year) {
+            return res.status(400).json({ message: 'month and financial_year are required' });
+        }
+
+        // Find or create the period
+        let periodResult = await db.query(
+            'SELECT * FROM periods WHERE month = $1 AND financial_year = $2',
+            [month, financial_year]
+        );
+
+        let period;
+        if (periodResult.rows.length === 0) {
+            periodResult = await db.query(
+                'INSERT INTO periods (month, financial_year, status) VALUES ($1, $2, $3) RETURNING *',
+                [month, financial_year, 'open']
+            );
+            period = periodResult.rows[0];
+        } else {
+            period = periodResult.rows[0];
+        }
+
+        // Get all active clients
+        const clientsResult = await db.query(
+            'SELECT id FROM clients WHERE is_active = true'
+        );
+
+        if (clientsResult.rows.length === 0) {
+            return res.status(400).json({ message: 'No active clients found. Add clients first.' });
+        }
+
+        // Insert GST records for each client, skipping duplicates
+        let created = 0;
+        let skipped = 0;
+        for (const client of clientsResult.rows) {
+            try {
+                await db.query(
+                    `INSERT INTO gst_records (client_id, period_id, gstr1_status, gstr3b_status) 
+                     VALUES ($1, $2, 'pending', 'pending')`,
+                    [client.id, period.id]
+                );
+                created++;
+            } catch (err) {
+                if (err.code === '23505') {
+                    skipped++;
+                } else {
+                    throw err;
+                }
+            }
+        }
+
+        res.status(201).json({
+            status: 'success',
+            data: {
+                period,
+                created,
+                skipped,
+                message: `Created ${created} records, skipped ${skipped} (already existed)`
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
  * Get GST records with joined client and period data
  * GET /api/gst-records?periodId=xxx
  */
