@@ -79,8 +79,10 @@ exports.getGstRecords = async (req, res, next) => {
 
         res.status(200).json({
             status: 'success',
-            results: result.rows.length,
-            data: result.rows,
+            data: {
+                items: result.rows,
+                total: result.rows.length
+            }
         });
     } catch (err) {
         next(err);
