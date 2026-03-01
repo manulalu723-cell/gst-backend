@@ -200,12 +200,20 @@ exports.updateGstRecord = async (req, res, next) => {
         const params = [];
         let paramIndex = 1;
 
-        const allowedFields = ['gstr1_status', 'gstr3b_status', 'gstr1_filed_date', 'gstr3b_filed_date', 'remarks', 'assigned_to'];
+        const allowedFields = [
+            'gstr1_status', 'gstr3b_status', 'gstr1_filed_date', 'gstr3b_filed_date', 'remarks', 'assigned_to',
+            'gstr1_tally_received', 'gstr1_entered_in_tally', 'gstr1_nil_return', 'gstr1_comments',
+            'gstr3b_tally_received', 'gstr3b_entered_in_tally', 'gstr3b_reconciliation', 'gstr3b_notices_orders',
+            'gstr3b_bills_pending', 'gstr3b_tax_liability', 'gstr3b_nil_return', 'gstr3b_comments',
+            'gstr1a_applicable', 'billing_status', 'bill_sent'
+        ];
 
         for (const field of allowedFields) {
             if (req.body[field] !== undefined) {
                 fields.push(`${field} = $${paramIndex++}`);
-                params.push(req.body[field] || null);
+                let val = req.body[field];
+                if (val === '') val = null;
+                params.push(val);
             }
         }
 

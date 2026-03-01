@@ -11,6 +11,12 @@ function toClientResponse(row) {
         filingType: row.filing_type || 'Monthly',
         state: row.state,
         isActive: row.is_active !== false,
+        lead: row.lead,
+        defaultAssignedTo: row.default_assigned_to,
+        rank: row.rank,
+        rcmApplicable: row.rcm_applicable,
+        contactNumber: row.contact_number,
+        modeOfFiling: row.mode_of_filing,
         created_at: row.created_at
     };
 }
@@ -21,20 +27,29 @@ function toClientResponse(row) {
  */
 exports.createClient = async (req, res, next) => {
     try {
-        // Accept both frontend (clientName) and backend (name) field names
         const name = req.body.clientName || req.body.name;
         const gstin = req.body.gstin;
         const state = req.body.state || '';
         const filingType = req.body.filingType || req.body.filing_type || 'Monthly';
         const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
 
+        const lead = req.body.lead || null;
+        const defaultAssignedTo = req.body.defaultAssignedTo || req.body.default_assigned_to || null;
+        const rank = req.body.rank || null;
+        const rcmApplicable = req.body.rcmApplicable !== undefined ? req.body.rcmApplicable : false;
+        const contactNumber = req.body.contactNumber || req.body.contact_number || null;
+        const modeOfFiling = req.body.modeOfFiling || req.body.mode_of_filing || null;
+
         if (!name || !gstin) {
             return res.status(400).json({ message: 'Name and GSTIN are required' });
         }
 
         const result = await db.query(
-            'INSERT INTO clients (name, gstin, state, filing_type, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [name, gstin, state, filingType, isActive]
+            `INSERT INTO clients (
+                name, gstin, state, filing_type, is_active, 
+                lead, default_assigned_to, rank, rcm_applicable, contact_number, mode_of_filing
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [name, gstin, state, filingType, isActive, lead, defaultAssignedTo, rank, rcmApplicable, contactNumber, modeOfFiling]
         );
 
         res.status(201).json({
@@ -114,13 +129,23 @@ exports.updateClient = async (req, res, next) => {
         const filingType = req.body.filingType || req.body.filing_type || 'Monthly';
         const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
 
+        const lead = req.body.lead !== undefined ? req.body.lead : null;
+        const defaultAssignedTo = req.body.defaultAssignedTo || req.body.default_assigned_to || null;
+        const rank = req.body.rank !== undefined ? req.body.rank : null;
+        const rcmApplicable = req.body.rcmApplicable !== undefined ? req.body.rcmApplicable : false;
+        const contactNumber = req.body.contactNumber || req.body.contact_number || null;
+        const modeOfFiling = req.body.modeOfFiling || req.body.mode_of_filing || null;
+
         if (!name || !gstin) {
             return res.status(400).json({ message: 'Name and GSTIN are required' });
         }
 
         const result = await db.query(
-            'UPDATE clients SET name = $1, gstin = $2, state = $3, filing_type = $4, is_active = $5 WHERE id = $6 RETURNING *',
-            [name, gstin, state, filingType, isActive, id]
+            `UPDATE clients SET 
+                name = $1, gstin = $2, state = $3, filing_type = $4, is_active = $5,
+                lead = $6, default_assigned_to = $7, rank = $8, rcm_applicable = $9, contact_number = $10, mode_of_filing = $11
+             WHERE id = $12 RETURNING *`,
+            [name, gstin, state, filingType, isActive, lead, defaultAssignedTo, rank, rcmApplicable, contactNumber, modeOfFiling, id]
         );
 
         if (result.rows.length === 0) {
