@@ -196,20 +196,27 @@ exports.getGstRecords = async (req, res, next) => {
 exports.updateGstRecord = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const {
-            gstr1_status,
-            gstr3b_status,
-            gstr1_filed_date,
-            gstr3b_filed_date,
-            remarks
-        } = req.body;
+        const fields = [];
+        const params = [];
+        let paramIndex = 1;
 
+        const allowedFields = ['gstr1_status', 'gstr3b_status', 'gstr1_filed_date', 'gstr3b_filed_date', 'remarks', 'assigned_to'];
+
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                fields.push(`${field} = $${paramIndex++}`);
+                params.push(req.body[field] || null);
+            }
+        }
+
+        if (fields.length === 0) {
+            return res.status(400).json({ message: 'No fields to update' });
+        }
+
+        params.push(id);
         const result = await db.query(
-            `UPDATE gst_records 
-      SET gstr1_status = $1, gstr3b_status = $2, gstr1_filed_date = $3, gstr3b_filed_date = $4, remarks = $5 
-      WHERE id = $6 
-      RETURNING *`,
-            [gstr1_status, gstr3b_status, gstr1_filed_date, gstr3b_filed_date, remarks, id]
+            `UPDATE gst_records SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+            params
         );
 
         if (result.rows.length === 0) {
