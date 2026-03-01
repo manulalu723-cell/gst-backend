@@ -1,28 +1,48 @@
 const db = require('../config/db');
 
 /**
+ * Maps a DB row to frontend Client format
+ */
+function toClientResponse(row) {
+    return {
+        id: row.id,
+        clientName: row.name,
+        gstin: row.gstin,
+        filingType: row.filing_type || 'Monthly',
+        state: row.state,
+        isActive: row.is_active !== false,
+        created_at: row.created_at
+    };
+}
+
+/**
  * Create a new client
  * POST /api/clients
  */
 exports.createClient = async (req, res, next) => {
     try {
-        const { name, gstin, state } = req.body;
+        // Accept both frontend (clientName) and backend (name) field names
+        const name = req.body.clientName || req.body.name;
+        const gstin = req.body.gstin;
+        const state = req.body.state || '';
+        const filingType = req.body.filingType || req.body.filing_type || 'Monthly';
+        const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
 
         if (!name || !gstin) {
             return res.status(400).json({ message: 'Name and GSTIN are required' });
         }
 
         const result = await db.query(
-            'INSERT INTO clients (name, gstin, state) VALUES ($1, $2, $3) RETURNING *',
-            [name, gstin, state || '']
+            'INSERT INTO clients (name, gstin, state, filing_type, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [name, gstin, state, filingType, isActive]
         );
 
         res.status(201).json({
             status: 'success',
-            data: result.rows[0],
+            data: toClientResponse(result.rows[0]),
         });
     } catch (err) {
-        if (err.code === '23505') { // Unique violation for GSTIN
+        if (err.code === '23505') {
             return res.status(400).json({ message: 'GSTIN already exists' });
         }
         next(err);
@@ -35,11 +55,22 @@ exports.createClient = async (req, res, next) => {
  */
 exports.getClients = async (req, res, next) => {
     try {
-        const result = await db.query('SELECT * FROM clients ORDER BY created_at DESC');
+        const search = req.query.q || req.query.search;
+        let query = 'SELECT * FROM clients';
+        const params = [];
+
+        if (search) {
+            query += ' WHERE name ILIKE $1 OR gstin ILIKE $1';
+            params.push(`%${search}%`);
+        }
+
+        query += ' ORDER BY created_at DESC';
+
+        const result = await db.query(query, params);
         res.status(200).json({
             status: 'success',
             data: {
-                items: result.rows,
+                items: result.rows.map(toClientResponse),
                 total: result.rows.length
             }
         });
@@ -63,7 +94,7 @@ exports.getClientById = async (req, res, next) => {
 
         res.status(200).json({
             status: 'success',
-            data: result.rows[0],
+            data: toClientResponse(result.rows[0]),
         });
     } catch (err) {
         next(err);
@@ -77,15 +108,19 @@ exports.getClientById = async (req, res, next) => {
 exports.updateClient = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, gstin, state } = req.body;
+        const name = req.body.clientName || req.body.name;
+        const gstin = req.body.gstin;
+        const state = req.body.state || '';
+        const filingType = req.body.filingType || req.body.filing_type || 'Monthly';
+        const isActive = req.body.isActive !== undefined ? req.body.isActive : true;
 
         if (!name || !gstin) {
             return res.status(400).json({ message: 'Name and GSTIN are required' });
         }
 
         const result = await db.query(
-            'UPDATE clients SET name = $1, gstin = $2, state = $3 WHERE id = $4 RETURNING *',
-            [name, gstin, state, id]
+            'UPDATE clients SET name = $1, gstin = $2, state = $3, filing_type = $4, is_active = $5 WHERE id = $6 RETURNING *',
+            [name, gstin, state, filingType, isActive, id]
         );
 
         if (result.rows.length === 0) {
@@ -94,7 +129,7 @@ exports.updateClient = async (req, res, next) => {
 
         res.status(200).json({
             status: 'success',
-            data: result.rows[0],
+            data: toClientResponse(result.rows[0]),
         });
     } catch (err) {
         if (err.code === '23505') {

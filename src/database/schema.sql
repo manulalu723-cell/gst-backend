@@ -17,7 +17,9 @@ CREATE TABLE clients (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     gstin VARCHAR(15) UNIQUE NOT NULL,
+    filing_type VARCHAR(20) DEFAULT 'Monthly',
     state VARCHAR(100) NOT NULL,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
