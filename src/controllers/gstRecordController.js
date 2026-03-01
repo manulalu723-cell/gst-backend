@@ -134,10 +134,12 @@ exports.getGstRecords = async (req, res, next) => {
         c.name as client_name, 
         c.gstin,
         p.month, 
-        p.financial_year 
+        p.financial_year,
+        u.name as assigned_to_name
       FROM gst_records r
       JOIN clients c ON r.client_id = c.id
       JOIN periods p ON r.period_id = p.id
+      LEFT JOIN users u ON r.assigned_to = u.id
     `;
 
         const conditions = [];
@@ -260,6 +262,10 @@ exports.bulkUpdateGstRecords = async (req, res, next) => {
             if (item.remarks !== undefined) {
                 fields.push(`remarks = $${paramIndex++}`);
                 params.push(item.remarks);
+            }
+            if (item.assigned_to !== undefined) {
+                fields.push(`assigned_to = $${paramIndex++}`);
+                params.push(item.assigned_to || null);
             }
 
             if (fields.length > 0 && item.id) {
