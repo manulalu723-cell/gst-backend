@@ -48,7 +48,7 @@ exports.createStaff = async (req, res, next) => {
 
         const result = await db.query(
             'INSERT INTO users (name, email, password_hash, role, active) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role, active, created_at',
-            [name, email, passwordHash, role, active !== false]
+            [name, email, passwordHash, role.toLowerCase(), active !== false]
         );
 
         res.status(201).json({
@@ -72,7 +72,7 @@ exports.updateStaff = async (req, res, next) => {
         const { name, email, role, active, password } = req.body;
 
         let query = 'UPDATE users SET name = $1, email = $2, role = $3, active = $4';
-        const params = [name, email, role, active];
+        const params = [name, email, role ? role.toLowerCase() : 'staff', active];
 
         if (password) {
             const salt = await bcrypt.genSalt(10);
