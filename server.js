@@ -21,17 +21,22 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
-    process.env.FRONTEND_URL.replace(/\/$/, "") // Remove trailing slash
-];
+    process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : null
+].filter(Boolean);
+
+// Add a regex check for Vercel preview/production domains
+const isVercelOrigin = (origin) => {
+    return origin.endsWith('.vercel.app') || (origin.includes('vercel.app') && origin.startsWith('https://'));
+};
 
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin)) {
+        if (allowedOrigins.includes(origin) || isVercelOrigin(origin)) {
             return callback(null, true);
         } else {
-            const error = new Error("CORS policy blocked this request.");
+            const error = new Error(`CORS policy blocked this request from origin: ${origin}`);
             error.statusCode = 403;
             return callback(error);
         }
